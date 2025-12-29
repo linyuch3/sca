@@ -7,6 +7,7 @@ import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // 支持的操作类型
 const ACTIONS = [

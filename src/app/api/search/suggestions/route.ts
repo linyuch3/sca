@@ -9,6 +9,7 @@ import { searchFromApi } from '@/lib/downstream';
 import { yellowWords } from '@/lib/yellow';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic'; // 强制服务端渲染，因为使用了cookies
 
 export async function GET(request: NextRequest) {
   try {
