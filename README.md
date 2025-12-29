@@ -27,6 +27,9 @@
 - 📱 **PWA**：离线缓存、安装到桌面/主屏，移动端原生体验。
 - 🌗 **响应式布局**：桌面侧边栏 + 移动底部导航，自适应各种屏幕尺寸。
 - 👿 **智能去广告**：自动跳过视频中的切片广告（实验性）。
+- 📢 **广告管理系统**：支持多位置图片/视频广告，自定义尺寸与有效期，轮播展示（[详细文档](ADVERTISEMENT_GUIDE.md)）。
+- 👥 **用户注册管理**：可配置开放注册、默认用户组，支持在线用户统计。
+- 📊 **API统计监控**：记录API调用日志、成功率、响应时间，按来源分类统计。
 
 ### 注意：部署后项目为空壳项目，无内置播放源和直播源，需要自行收集
 
@@ -341,6 +344,8 @@ dockge/komodo 等 docker compose UI 也有自动更新功能
 | NEXT_PUBLIC_DOUBAN_IMAGE_PROXY      | 自定义豆瓣图片代理 URL                       | url prefix                       | (空)                                                                                                                       |
 | NEXT_PUBLIC_DISABLE_YELLOW_FILTER   | 关闭色情内容过滤                             | true/false                       | false                                                                                                                      |
 | NEXT_PUBLIC_FLUID_SEARCH | 是否开启搜索接口流式输出 | true/ false | true |
+| OPEN_REGISTER                       | 是否开放用户注册                             | true/false                       | false                                                                                                                      |
+| DEFAULT_USER_GROUP                  | 新注册用户默认用户组                         | 任意字符串                       | user                                                                                                                       |
 
 NEXT_PUBLIC_DOUBAN_PROXY_TYPE 选项解释：
 
