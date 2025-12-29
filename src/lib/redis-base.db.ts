@@ -3,16 +3,15 @@
 import { createClient, RedisClientType } from 'redis';
 
 import { AdminConfig } from './admin.types';
-import { 
-  Favorite, 
-  IStorage, 
-  PlayRecord, 
+import {
+  Advertisement,
+  ApiCallLog,
+  Favorite,
+  IStorage,
+  PlayRecord,
   SkipConfig,
   UserMeta,
-  ApiCallLog,
-  UserSession,
-  Advertisement
-} from './types';
+  UserSession} from './types';
 
 // 搜索历史最大条数
 const SEARCH_HISTORY_LIMIT = 20;
@@ -515,7 +514,7 @@ export abstract class BaseRedisStorage implements IStorage {
     });
   }
 
-  async getApiCallLogs(limit: number = 100): Promise<ApiCallLog[]> {
+  async getApiCallLogs(limit = 100): Promise<ApiCallLog[]> {
     const key = this.apiCallLogsKey();
     const logs = await this.withRetry(() =>
       this.client.zRange(key, 0, limit - 1, { REV: true })
@@ -563,7 +562,7 @@ export abstract class BaseRedisStorage implements IStorage {
     });
   }
 
-  async getAllActiveSessions(timeoutMinutes: number = 30): Promise<UserSession[]> {
+  async getAllActiveSessions(timeoutMinutes = 30): Promise<UserSession[]> {
     const now = Date.now();
     const cutoffTime = now - timeoutMinutes * 60 * 1000;
     

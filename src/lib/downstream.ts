@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { logApiCall } from './api-logger';
 import { API_CONFIG, ApiSite, getConfig } from '@/lib/config';
 import { getCachedSearchPage, setCachedSearchPage } from '@/lib/search-cache';
 import { SearchResult } from '@/lib/types';
 import { cleanHtmlTags } from '@/lib/utils';
+
+import { logApiCall } from './api-logger';
 
 interface ApiSearchItem {
   vod_id: string;
@@ -55,7 +56,7 @@ async function searchWithCache(
 
     if (!response.ok) {
       // 记录失败的API调用
-      await logApiCall(apiSite.key, apiSite.name, false, `HTTP ${response.status}`, responseTime).catch(() => {});
+      await logApiCall(apiSite.key, apiSite.name, false, `HTTP ${response.status}`, responseTime).catch(() => { /* ignore */ });
       
       if (response.status === 403) {
         setCachedSearchPage(apiSite.key, query, page, 'forbidden', []);
@@ -75,7 +76,7 @@ async function searchWithCache(
     }
 
     // 记录成功的API调用
-    await logApiCall(apiSite.key, apiSite.name, true, undefined, responseTime).catch(() => {});
+    await logApiCall(apiSite.key, apiSite.name, true, undefined, responseTime).catch(() => { /* ignore */ });
 
     // 处理结果数据
     const allResults = data.list.map((item: ApiSearchItem) => {
@@ -142,7 +143,7 @@ async function searchWithCache(
     
     // 记录失败的API调用
     const errorMsg = aborted ? '超时' : error?.message || '未知错误';
-    await logApiCall(apiSite.key, apiSite.name, false, errorMsg, responseTime).catch(() => {});
+    await logApiCall(apiSite.key, apiSite.name, false, errorMsg, responseTime).catch(() => { /* ignore */ });
     
     if (aborted) {
       setCachedSearchPage(apiSite.key, query, page, 'timeout', []);
@@ -238,7 +239,7 @@ export async function getDetailFromApi(
 
     if (!response.ok) {
       // 记录失败的API调用
-      await logApiCall(apiSite.key, apiSite.name, false, `HTTP ${response.status}`, responseTime).catch(() => {});
+      await logApiCall(apiSite.key, apiSite.name, false, `HTTP ${response.status}`, responseTime).catch(() => { /* ignore */ });
       throw new Error(`详情请求失败: ${response.status}`);
     }
 
@@ -251,12 +252,12 @@ export async function getDetailFromApi(
       data.list.length === 0
     ) {
       // 记录失败的API调用
-      await logApiCall(apiSite.key, apiSite.name, false, '无效数据', responseTime).catch(() => {});
+      await logApiCall(apiSite.key, apiSite.name, false, '无效数据', responseTime).catch(() => { /* ignore */ });
       throw new Error('获取到的详情内容无效');
     }
 
     // 记录成功的API调用
-    await logApiCall(apiSite.key, apiSite.name, true, undefined, responseTime).catch(() => {});
+    await logApiCall(apiSite.key, apiSite.name, true, undefined, responseTime).catch(() => { /* ignore */ });
 
     const videoDetail = data.list[0];
     let episodes: string[] = [];
@@ -316,7 +317,7 @@ export async function getDetailFromApi(
     
     // 记录失败的API调用
     const errorMsg = error?.message || '未知错误';
-    await logApiCall(apiSite.key, apiSite.name, false, errorMsg, responseTime).catch(() => {});
+    await logApiCall(apiSite.key, apiSite.name, false, errorMsg, responseTime).catch(() => { /* ignore */ });
     
     throw error;
   }
