@@ -3946,27 +3946,6 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
           <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
             选择获取豆瓣数据的方式
           </p>
-
-          {/* 感谢信息 */}
-          {getThanksInfo(siteSettings.DoubanProxyType) && (
-            <div className='mt-3'>
-              <button
-                type='button'
-                onClick={() =>
-                  window.open(
-                    getThanksInfo(siteSettings.DoubanProxyType)!.url,
-                    '_blank'
-                  )
-                }
-                className='flex items-center justify-center gap-1.5 w-full px-3 text-xs text-gray-500 dark:text-gray-400 cursor-pointer'
-              >
-                <span className='font-medium'>
-                  {getThanksInfo(siteSettings.DoubanProxyType)!.text}
-                </span>
-                <ExternalLink className='w-3.5 opacity-70' />
-              </button>
-            </div>
-          )}
         </div>
 
         {/* 豆瓣代理地址设置 - 仅在选择自定义代理时显示 */}
@@ -4058,27 +4037,6 @@ const SiteConfigComponent = ({ config, refreshConfig }: { config: AdminConfig | 
           <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
             选择获取豆瓣图片的方式
           </p>
-
-          {/* 感谢信息 */}
-          {getThanksInfo(siteSettings.DoubanImageProxyType) && (
-            <div className='mt-3'>
-              <button
-                type='button'
-                onClick={() =>
-                  window.open(
-                    getThanksInfo(siteSettings.DoubanImageProxyType)!.url,
-                    '_blank'
-                  )
-                }
-                className='flex items-center justify-center gap-1.5 w-full px-3 text-xs text-gray-500 dark:text-gray-400 cursor-pointer'
-              >
-                <span className='font-medium'>
-                  {getThanksInfo(siteSettings.DoubanImageProxyType)!.text}
-                </span>
-                <ExternalLink className='w-3.5 opacity-70' />
-              </button>
-            </div>
-          )}
         </div>
 
         {/* 豆瓣代理地址设置 - 仅在选择自定义代理时显示 */}

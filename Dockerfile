@@ -24,6 +24,7 @@ COPY . .
 
 # 在构建阶段也显式设置 DOCKER_ENV，
 ENV DOCKER_ENV=true
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # 生成生产构建
 RUN pnpm run build
@@ -39,6 +40,7 @@ ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 ENV DOCKER_ENV=true
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 
 # 从构建器中复制 standalone 输出
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

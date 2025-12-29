@@ -8,7 +8,11 @@ const nextConfig = {
   },
 
   reactStrictMode: false,
-  swcMinify: false,
+  swcMinify: true, // 启用SWC压缩，解决Docker部署chunk加载问题
+
+  // 优化生产构建
+  compress: true,
+  poweredByHeader: false,
 
   experimental: {
     instrumentationHook: process.env.NODE_ENV === 'production',
