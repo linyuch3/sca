@@ -320,6 +320,13 @@ export abstract class BaseRedisStorage implements IStorage {
     if (skipConfigKeys.length > 0) {
       await this.withRetry(() => this.client.del(skipConfigKeys));
     }
+
+    // 删除用户登入统计数据
+    const loginStatsKey = this.userLoginStatsKey(userName);
+    await this.withRetry(() => this.client.del(loginStatsKey));
+
+    // 删除用户元数据
+    await this.withRetry(() => this.client.del(this.userMetaKey(userName)));
   }
 
   // ---------- 搜索历史 ----------
@@ -488,6 +495,74 @@ export abstract class BaseRedisStorage implements IStorage {
     await this.withRetry(() =>
       this.client.set(this.userMetaKey(userName), JSON.stringify(meta))
     );
+  }
+
+  // ---------- 用户登入统计（独立存储，用于非活跃用户清理）----------
+  private userLoginStatsKey(user: string) {
+    return `user_login_stats:${user}`;
+  }
+
+  async getUserLoginStats(userName: string): Promise<{
+    loginCount: number;
+    firstLoginTime: number;
+    lastLoginTime: number;
+    lastLoginDate: number;
+  } | null> {
+    try {
+      const val = await this.withRetry(() =>
+        this.client.get(this.userLoginStatsKey(userName))
+      );
+      if (!val) return null;
+      const parsed = JSON.parse(val);
+      return {
+        loginCount: parsed.loginCount || 0,
+        firstLoginTime: parsed.firstLoginTime || 0,
+        lastLoginTime: parsed.lastLoginTime || 0,
+        lastLoginDate: parsed.lastLoginDate || parsed.lastLoginTime || 0
+      };
+    } catch (error) {
+      console.error(`获取用户 ${userName} 登入统计失败:`, error);
+      return null;
+    }
+  }
+
+  async updateUserLoginStats(
+    userName: string,
+    loginTime: number,
+    isFirstLogin?: boolean
+  ): Promise<void> {
+    try {
+      const loginStatsKey = this.userLoginStatsKey(userName);
+
+      // 获取当前登入统计数据
+      const currentStats = await this.client.get(loginStatsKey);
+      const loginStats = currentStats ? JSON.parse(currentStats) : {
+        loginCount: 0,
+        firstLoginTime: null,
+        lastLoginTime: null,
+        lastLoginDate: null
+      };
+
+      // 更新统计数据
+      loginStats.loginCount = (loginStats.loginCount || 0) + 1;
+      loginStats.lastLoginTime = loginTime;
+      loginStats.lastLoginDate = loginTime; // 保持兼容性
+
+      // 如果是首次登入，记录首次登入时间
+      if (isFirstLogin || !loginStats.firstLoginTime) {
+        loginStats.firstLoginTime = loginTime;
+      }
+
+      // 保存到 Redis
+      await this.withRetry(() =>
+        this.client.set(loginStatsKey, JSON.stringify(loginStats))
+      );
+
+      console.log(`用户 ${userName} 登入统计已更新:`, loginStats);
+    } catch (error) {
+      console.error(`更新用户 ${userName} 登入统计失败:`, error);
+      throw error;
+    }
   }
 
   // ---------- API调用日志 ----------

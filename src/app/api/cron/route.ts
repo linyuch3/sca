@@ -45,78 +45,107 @@ async function cronJob() {
   await cleanInactiveUsers();
 }
 
-// 清理非活跃用户
+// 清理非活跃用户（使用 LunaTV 的逻辑：基于 lastLoginTime）
 async function cleanInactiveUsers() {
   try {
+    console.log('🔧 正在获取配置...');
     const config = await getConfig();
+    console.log('✅ 配置获取成功');
     
     // 检查是否开启了自动清理功能
-    if (!config.SiteConfig.autoCleanInactiveUsers) {
-      console.log('自动清理非活跃用户功能未开启，跳过');
+    const autoCleanupEnabled = config.SiteConfig.autoCleanInactiveUsers ?? false;
+    const inactiveDays = config.SiteConfig.inactiveUserDays || 7;
+    
+    console.log(`📋 清理配置: 启用=${autoCleanupEnabled}, 保留天数=${inactiveDays}`);
+
+    if (!autoCleanupEnabled) {
+      console.log('⏭️ 自动清理非活跃用户功能已禁用，跳过清理任务');
       return;
     }
 
-    const inactiveDays = config.SiteConfig.inactiveUserDays || 7;
+    console.log('🧹 开始清理非活跃用户...');
+
     const cutoffTime = Date.now() - inactiveDays * 24 * 60 * 60 * 1000;
     const ownerUsername = process.env.USERNAME;
+    const allUsers = config.UserConfig.Users;
     
-    console.log(`开始清理 ${inactiveDays} 天未登录的非活跃用户...`);
+    console.log(`✅ 获取用户列表成功，共 ${allUsers.length} 个用户`);
+    console.log(`✅ 截止时间: ${new Date(cutoffTime).toISOString()}`);
     
-    const usersToRemove: string[] = [];
+    let deletedCount = 0;
     
-    for (const user of config.UserConfig.Users) {
-      // 跳过站长和管理员
-      if (user.role === 'owner' || user.role === 'admin' || user.username === ownerUsername) {
-        continue;
-      }
-      
-      // 获取用户元数据
-      const userMeta = await db.getUserMeta(user.username);
-      const lastActiveAt = userMeta?.lastActiveAt || userMeta?.createdAt || 0;
-      
-      // 如果用户没有活跃记录，为其初始化元数据（给予缓冲期）
-      if (lastActiveAt === 0) {
-        const now = Date.now();
-        await db.setUserMeta(user.username, {
-          createdAt: now,
-          lastActiveAt: now,
-        });
-        console.log(`为用户 ${user.username} 初始化活跃记录，开始计算缓冲期`);
-        continue; // 跳过本次清理，下次再检查
-      }
-      
-      // 如果用户最后活跃时间超过阈值，标记为删除
-      if (lastActiveAt < cutoffTime) {
-        usersToRemove.push(user.username);
-      }
-    }
-    
-    if (usersToRemove.length === 0) {
-      console.log('没有需要清理的非活跃用户');
-      return;
-    }
-    
-    console.log(`发现 ${usersToRemove.length} 个非活跃用户待清理: ${usersToRemove.join(', ')}`);
-    
-    // 从配置中移除用户
-    config.UserConfig.Users = config.UserConfig.Users.filter(
-      u => !usersToRemove.includes(u.username)
-    );
-    
-    // 保存配置
-    await db.saveAdminConfig(config);
-    
-    // 清理用户数据
-    for (const username of usersToRemove) {
+    for (const user of allUsers) {
       try {
-        await db.deleteUser(username);
-        console.log(`已清理用户数据: ${username}`);
+        console.log(`👤 正在检查用户: ${user.username} (角色: ${user.role})`);
+
+        // 跳过站长和管理员
+        if (user.role === 'owner' || user.role === 'admin' || user.username === ownerUsername) {
+          console.log(`  ⏭️ 跳过管理员/站长用户: ${user.username}`);
+          continue;
+        }
+        
+        // 检查用户是否存在于数据库
+        let userExists = true;
+        try {
+          userExists = await db.checkUserExist(user.username);
+        } catch (err) {
+          console.error(`  ❌ 检查用户存在状态失败: ${err}, 跳过该用户`);
+          continue;
+        }
+
+        if (!userExists) {
+          console.log(`  ⚠️ 用户 ${user.username} 在配置中存在但数据库中不存在，跳过处理`);
+          continue;
+        }
+
+        // 获取用户登入统计（使用独立的登入统计存储）
+        let loginStats;
+        try {
+          loginStats = await db.getUserLoginStats(user.username);
+          console.log(`  📊 用户登入统计:`, loginStats);
+        } catch (err) {
+          console.error(`  ❌ 获取用户登入统计失败: ${err}, 跳过该用户`);
+          continue;
+        }
+
+        // 获取最后登入时间（优先级：lastLoginTime > lastLoginDate > firstLoginTime）
+        const lastLoginTime = loginStats?.lastLoginTime || loginStats?.lastLoginDate || loginStats?.firstLoginTime || 0;
+
+        // 删除条件：有登入记录且最后登入时间超过阈值
+        const shouldDelete = lastLoginTime > 0 && lastLoginTime < cutoffTime;
+
+        if (shouldDelete) {
+          console.log(`🗑️ 删除非活跃用户: ${user.username} (最后登入: ${new Date(lastLoginTime).toISOString()}, 登入次数: ${loginStats?.loginCount || 0}, 阈值: ${inactiveDays}天)`);
+
+          // 从数据库删除用户数据
+          await db.deleteUser(user.username);
+
+          // 从配置中移除用户
+          const userIndex = config.UserConfig.Users.findIndex(u => u.username === user.username);
+          if (userIndex !== -1) {
+            config.UserConfig.Users.splice(userIndex, 1);
+          }
+
+          deletedCount++;
+        } else {
+          const reason = lastLoginTime > 0
+            ? `最近有登入活动 (最后登入: ${new Date(lastLoginTime).toISOString()})`
+            : '无登入记录（数据异常，保留用户）';
+          console.log(`✅ 保留用户 ${user.username}: ${reason}`);
+        }
+
       } catch (err) {
-        console.error(`清理用户数据失败 (${username}):`, err);
+        console.error(`❌ 处理用户 ${user.username} 时出错:`, err);
       }
     }
-    
-    console.log(`成功清理 ${usersToRemove.length} 个非活跃用户`);
+
+    // 如果有删除操作，保存更新后的配置
+    if (deletedCount > 0) {
+      await db.saveAdminConfig(config);
+      console.log(`✨ 清理完成，共删除 ${deletedCount} 个非活跃用户`);
+    } else {
+      console.log('✨ 清理完成，无需删除任何用户');
+    }
   } catch (error) {
     console.error('清理非活跃用户失败:', error);
   }

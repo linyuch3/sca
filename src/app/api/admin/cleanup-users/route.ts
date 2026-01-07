@@ -32,25 +32,23 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      const userMeta = await db.getUserMeta(user.username);
-      const lastActiveAt = userMeta?.lastActiveAt || userMeta?.createdAt || 0;
+      // 使用独立的登入统计（与 LunaTV 一致）
+      const loginStats = await db.getUserLoginStats(user.username);
+      const lastLoginTime = loginStats?.lastLoginTime || loginStats?.lastLoginDate || loginStats?.firstLoginTime || 0;
 
       if (mode === 'force') {
-        // 强制清理模式：无活跃记录或超时都清理
-        if (lastActiveAt === 0 || lastActiveAt < cutoffTime) {
+        // 强制清理模式：无登入记录或超时都清理
+        if (lastLoginTime === 0 || lastLoginTime < cutoffTime) {
           usersToRemove.push(user.username);
         }
       } else {
         // 带缓冲期模式
-        if (lastActiveAt === 0) {
-          // 初始化用户活跃记录
+        if (lastLoginTime === 0) {
+          // 为没有登入记录的用户初始化登入统计
           const now = Date.now();
-          await db.setUserMeta(user.username, {
-            createdAt: now,
-            lastActiveAt: now,
-          });
+          await db.updateUserLoginStats(user.username, now, true);
           initializedCount++;
-        } else if (lastActiveAt < cutoffTime) {
+        } else if (lastLoginTime < cutoffTime) {
           usersToRemove.push(user.username);
         }
       }

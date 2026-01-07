@@ -1,0 +1,18 @@
+services:
+  moontv-kvrocks:
+    image: apache/kvrocks
+    container_name: moontv-kvrocks-dev
+    restart: unless-stopped
+    ports:
+      - '6666:6666'
+    volumes:
+      - kvrocks-dev-data:/var/lib/kvrocks
+    networks:
+      - moontv-dev-network
+
+networks:
+  moontv-dev-network:
+    driver: bridge
+
+volumes:
+  kvrocks-dev-data:

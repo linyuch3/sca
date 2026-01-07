@@ -5,6 +5,7 @@ export interface UserMeta {
   createdAt: number; // 注册时间戳
   lastActiveAt: number; // 最后活跃时间戳
   loginCount: number; // 登录次数
+  firstLoginTime?: number; // 首次登入时间戳
 }
 
 // API调用日志

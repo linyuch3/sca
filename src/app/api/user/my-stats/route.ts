@@ -41,11 +41,25 @@ export async function GET(request: NextRequest) {
     const currentDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
     const registrationDays = Math.floor((currentDay.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
-    // 从 UserMeta 获取用户登录统计
-    const loginCount = userMeta?.loginCount || 0;
-    const lastLoginTime = userMeta?.lastActiveAt || 0;
-    const firstLoginTime = userMeta?.createdAt || userCreatedAt;
-    const loginDays = 0; // 可以后续计算实际的登录天数
+    // 从独立的登入统计获取登录信息（与 LunaTV 一致）
+    const loginStats = await storage.getUserLoginStats(username);
+    const loginCount = loginStats?.loginCount || 0;
+    const lastLoginTime = loginStats?.lastLoginTime || loginStats?.lastLoginDate || 0;
+    const firstLoginTime = loginStats?.firstLoginTime || 0;
+    
+    // 计算登录天数（从首次登入到现在的自然天数）
+    const calculateLoginDays = (startTime: number): number => {
+      if (!startTime || startTime <= 0) return 0;
+      const startDate = new Date(startTime);
+      const currentDate = new Date();
+      const startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+      const currentDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+      const daysDiff = Math.floor((currentDay.getTime() - startDay.getTime()) / (1000 * 60 * 60 * 24));
+      return daysDiff + 1;
+    };
+    
+    // 只有在有登录记录时才计算登录天数
+    const loginDays = loginCount > 0 ? calculateLoginDays(firstLoginTime) : 0;
 
     // 获取用户所有播放记录
     const userPlayRecords = await storage.getAllPlayRecords(username);

@@ -181,13 +181,24 @@ export async function POST(req: NextRequest) {
       // 更新用户元数据（登录计数和最后活跃时间）
       try {
         const meta = await db.getUserMeta(username);
+        const now = Date.now();
         await db.setUserMeta(username, {
-          createdAt: meta?.createdAt || Date.now(),
-          lastActiveAt: Date.now(),
-          loginCount: (meta?.loginCount || 0) + 1
+          createdAt: meta?.createdAt || now,
+          lastActiveAt: now,
+          loginCount: (meta?.loginCount || 0) + 1,
+          firstLoginTime: meta?.firstLoginTime || now
         });
       } catch (err) {
         console.error('更新用户元数据失败:', err);
+      }
+
+      // 更新独立的登入统计（用于非活跃用户清理判断）
+      try {
+        const loginStats = await db.getUserLoginStats(username);
+        const isFirstLogin = !loginStats || loginStats.loginCount === 0;
+        await db.updateUserLoginStats(username, Date.now(), isFirstLogin);
+      } catch (err) {
+        console.error('更新用户登入统计失败:', err);
       }
 
       // 验证成功，设置认证cookie

@@ -254,6 +254,29 @@ export class DbManager {
     }
   }
 
+  // ---------- 用户登入统计（独立存储）----------
+  async getUserLoginStats(userName: string): Promise<{
+    loginCount: number;
+    firstLoginTime: number;
+    lastLoginTime: number;
+    lastLoginDate: number;
+  } | null> {
+    if (typeof (this.storage as any).getUserLoginStats === 'function') {
+      return (this.storage as any).getUserLoginStats(userName);
+    }
+    return null;
+  }
+
+  async updateUserLoginStats(
+    userName: string,
+    loginTime: number,
+    isFirstLogin?: boolean
+  ): Promise<void> {
+    if (typeof (this.storage as any).updateUserLoginStats === 'function') {
+      await (this.storage as any).updateUserLoginStats(userName, loginTime, isFirstLogin);
+    }
+  }
+
   // ---------- API调用日志 ----------
   async addApiCallLog(log: any) {
     if (typeof (this.storage as any).addApiCallLog === 'function') {
