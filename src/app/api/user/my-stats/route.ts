@@ -149,3 +149,66 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+// PUT 方法：记录用户登入时间（与 LunaTV 一致）
+export async function PUT(request: NextRequest) {
+  try {
+    console.log('PUT /api/user/my-stats - 记录用户登入时间');
+
+    const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
+    if (storageType === 'localstorage') {
+      return NextResponse.json(
+        { error: '不支持本地存储进行登入统计' },
+        { status: 400 }
+      );
+    }
+
+    // 从 cookie 获取用户信息
+    const authInfo = getAuthInfoFromCookie(request);
+    if (!authInfo || !authInfo.username) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { loginTime } = body;
+
+    if (!loginTime || typeof loginTime !== 'number') {
+      return NextResponse.json(
+        { error: '参数错误：需要 loginTime' },
+        { status: 400 }
+      );
+    }
+
+    // 获取当前登入统计
+    const currentStats = await db.getUserLoginStats(authInfo.username);
+    const isFirstLogin = !currentStats || currentStats.loginCount === 0;
+
+    // 更新登入统计
+    await db.updateUserLoginStats(authInfo.username, loginTime, isFirstLogin);
+
+    const newLoginCount = (currentStats?.loginCount || 0) + 1;
+
+    console.log('用户登入统计已记录:', {
+      username: authInfo.username,
+      loginTime,
+      isFirstLogin,
+      loginCount: newLoginCount
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: '登入时间记录成功',
+      loginTime,
+      loginCount: newLoginCount
+    });
+  } catch (error) {
+    console.error('PUT /api/user/my-stats - 记录登入时间失败:', error);
+    return NextResponse.json(
+      {
+        error: '记录登入时间失败',
+        details: process.env.NODE_ENV === 'development' ? (error as Error)?.message : undefined
+      },
+      { status: 500 }
+    );
+  }
+}
